@@ -7,48 +7,118 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
+
 body {
-    font-family: Arial;
-    background: #0f172a;
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg,#0f172a,#020617);
     color: white;
     text-align: center;
 }
 
-.card {
-    background: #1e293b;
-    padding: 20px;
-    margin: 15px;
-    border-radius: 15px;
+/* TITLE */
+h1 {
+    font-size: 42px;
+    margin-top: 20px;
+    color: #38bdf8;
+    text-shadow: 0 0 15px #38bdf8;
 }
 
-h1 { font-size: 40px; }
+/* GRID */
+.container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit,minmax(300px,1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
+/* CARD */
+.card {
+    background: rgba(30,41,59,0.8);
+    padding: 20px;
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 0 20px rgba(56,189,248,0.2);
+    transition: 0.3s;
+}
+
+.card:hover {
+    transform: scale(1.03);
+}
+
+/* TODAY */
+.big {
+    font-size: 55px;
+    font-weight: bold;
+}
+
+/* STATUS COLOR */
+.good { color: #22c55e; }
+.bad { color: #ef4444; }
+
+/* LIST */
+ul {
+    list-style: none;
+    padding: 0;
+    font-size: 18px;
+}
+
+/* RANK STYLE */
+.rank li {
+    margin: 8px 0;
+    padding: 10px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.05);
+}
+
+/* ALERT */
+.alert li {
+    color: #f87171;
+}
+
+/* FOOTER */
+.footer {
+    opacity: 0.5;
+    margin: 10px;
+    font-size: 12px;
+}
+
 </style>
 </head>
 
 <body>
 
-<h1>📊 Dashboard Kehadiran</h1>
+<h1>📊 Dashboard Kehadiran Sekolah</h1>
 
-<div class="card">
-    <h2>📅 Kehadiran Hari Ini</h2>
-    <h1 id="percent">Loading...</h1>
-    <p id="total"></p>
+<div class="container">
+
+    <!-- TODAY -->
+    <div class="card">
+        <h2>📅 Kehadiran Hari Ini</h2>
+        <div id="percent" class="big">Loading...</div>
+        <p id="total"></p>
+    </div>
+
+    <!-- RANKING -->
+    <div class="card">
+        <h2>🏆 Top 3 Kelas</h2>
+        <ul id="ranking" class="rank"></ul>
+    </div>
+
+    <!-- ALERT -->
+    <div class="card">
+        <h2>⚠️ Belum Isi</h2>
+        <ul id="alert" class="alert"></ul>
+    </div>
+
+    <!-- CHART -->
+    <div class="card">
+        <h2>📈 Trend 7 Hari</h2>
+        <canvas id="chart"></canvas>
+    </div>
+
 </div>
 
-<div class="card">
-    <h2>🏆 Top 3 Kelas</h2>
-    <ul id="ranking"></ul>
-</div>
-
-<div class="card">
-    <h2>⚠️ Belum Isi</h2>
-    <ul id="alert"></ul>
-</div>
-
-<div class="card">
-    <h2>📈 Trend 7 Hari</h2>
-    <canvas id="chart"></canvas>
-</div>
+<div class="footer">Auto Refresh setiap 10 saat</div>
 
 <script>
 
@@ -89,7 +159,7 @@ async function loadData() {
             recordedToday.push(r.Kelas.toLowerCase());
         }
 
-        // RANKING
+        // RANK
         if (!kelasStat[r.Kelas]) {
             kelasStat[r.Kelas] = {h:0,t:0};
         }
@@ -105,12 +175,19 @@ async function loadData() {
 
     });
 
-    // 📊 TODAY DISPLAY
+    // TODAY DISPLAY
     const percent = total ? ((hadir/total)*100).toFixed(1) : 0;
-    document.getElementById("percent").innerText = percent + "%";
+
+    const percentEl = document.getElementById("percent");
+    percentEl.innerText = percent + "%";
+
+    // warna live
+    if (percent >= 95) percentEl.classList.add("good");
+    else percentEl.classList.add("bad");
+
     document.getElementById("total").innerText = `${hadir} / ${total} murid`;
 
-    // 🏆 RANKING
+    // RANKING
     let ranking = Object.entries(kelasStat).map(([k,v])=>{
         return [k, (v.h/v.t)*100];
     });
@@ -127,17 +204,21 @@ async function loadData() {
         ul.innerHTML += `<li>${medal[i]} ${r[0]} - ${r[1].toFixed(1)}%</li>`;
     });
 
-    // ⚠️ ALERT
+    // ALERT
     const belum = ALL_CLASSES.filter(k => !recordedToday.includes(k.toLowerCase()));
 
     const alertBox = document.getElementById("alert");
     alertBox.innerHTML = "";
 
-    belum.forEach(k=>{
-        alertBox.innerHTML += `<li>❌ ${k}</li>`;
-    });
+    if (belum.length === 0) {
+        alertBox.innerHTML = "<li style='color:#22c55e'>✅ Semua kelas sudah isi</li>";
+    } else {
+        belum.forEach(k=>{
+            alertBox.innerHTML += `<li>❌ ${k}</li>`;
+        });
+    }
 
-    // 📈 CHART
+    // CHART
     const labels = Object.keys(dates).slice(-7);
     const values = labels.map(d => (dates[d].h/dates[d].t)*100);
 
@@ -147,7 +228,8 @@ async function loadData() {
             labels: labels,
             datasets: [{
                 label: 'Trend Kehadiran (%)',
-                data: values
+                data: values,
+                tension: 0.4
             }]
         }
     });
@@ -156,7 +238,7 @@ async function loadData() {
 
 loadData();
 
-// 📺 AUTO REFRESH
+// AUTO REFRESH
 setInterval(() => location.reload(), 10000);
 
 </script>
