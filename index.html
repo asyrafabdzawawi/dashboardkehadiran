@@ -135,7 +135,7 @@ async function loadData() {
 
 // set dekat title
     document.getElementById("todayTitle").innerText = `📅 Kehadiran Hari Ini (${tarikh})`;
-    document.getElementById("alertTitle").innerText = `⚠️ Belum Isi (${tarikh})`;
+    document.getElementById("alertTitle").innerText = `⚠️ Belum Rekod Kehadiran (${tarikh})`;
     
     const res = await fetch(URL);
     const data = await res.json();
