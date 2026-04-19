@@ -15,12 +15,11 @@ body {
 }
 
 h1 {
-    font-size: 42px;
+    font-size: 40px;
     margin-top: 20px;
     color: #38bdf8;
 }
 
-/* 🔥 LAYOUT */
 .container {
     display: grid;
     grid-template-columns: repeat(4,1fr);
@@ -28,15 +27,12 @@ h1 {
     padding: 20px;
 }
 
-.full {
-    grid-column: span 4;
-}
+.full { grid-column: span 4; }
 
 .card {
-    background: rgba(30,41,59,0.85);
+    background: rgba(30,41,59,0.9);
     padding: 20px;
     border-radius: 20px;
-    box-shadow: 0 0 20px rgba(56,189,248,0.2);
 }
 
 .big {
@@ -50,19 +46,18 @@ h1 {
 ul { list-style: none; padding: 0; }
 
 .rank li {
-    margin: 5px 0;
-    padding: 8px;
+    padding: 6px;
+    margin: 4px 0;
     background: rgba(255,255,255,0.05);
-    border-radius: 10px;
+    border-radius: 8px;
 }
 
 .alert li { color: #f87171; }
 
 select {
-    padding:5px;
-    margin-bottom:10px;
+    padding: 5px;
+    margin-bottom: 10px;
 }
-
 </style>
 </head>
 
@@ -72,38 +67,43 @@ select {
 
 <div class="container">
 
-<!-- 🔥 FULL WIDTH -->
+<!-- TOP -->
 <div class="card full">
     <h2 id="todayTitle"></h2>
-    <div id="percent" class="big">Loading...</div>
+    <div id="percent" class="big"></div>
     <p id="total"></p>
 </div>
 
 <!-- RANKING -->
 <div class="card">
     <h2>🏆 Ranking</h2>
-    <h4>Mingguan</h4>
-    <ul id="ranking_week"></ul>
-    <h4>Bulanan</h4>
-    <ul id="ranking_month"></ul>
+
+    <h4>📅 Mingguan</h4>
+    <ul id="ranking_week" class="rank"></ul>
+
+    <h4>🗓 Bulanan</h4>
+    <ul id="ranking_month" class="rank"></ul>
+
+    <h4>🌍 Keseluruhan</h4>
+    <ul id="ranking_all" class="rank"></ul>
 </div>
 
 <!-- ALERT -->
 <div class="card">
     <h2 id="alertTitle"></h2>
-    <ul id="alert"></ul>
+    <ul id="alert" class="alert"></ul>
 </div>
 
-<!-- ABSENT -->
+<!-- SEMAK KEHADIRAN -->
 <div class="card">
-    <h2>🚫 Tidak Hadir</h2>
+    <h2>✅ Semak Kehadiran</h2>
     <select id="classFilter"></select>
     <div id="absentList"></div>
 </div>
 
 <!-- CHART -->
 <div class="card">
-    <h2>📈 Trend</h2>
+    <h2>📈 Trend 7 Hari</h2>
     <canvas id="chart"></canvas>
 </div>
 
@@ -112,28 +112,29 @@ select {
 <script>
 
 const URL = "https://opensheet.elk.sh/1KPsN_fdh7b1rj-6fJOljPdcn87Tz2qmh-iMwUhwPrbg/Kehadiran";
-const TOTAL_SEKOLAH = 520;
+const TOTAL = 520;
 
 async function loadData(){
 
 const res = await fetch(URL);
 const data = await res.json();
 
-const todayStr = new Date().toLocaleDateString("en-GB");
-const now = new Date();
+const today = new Date();
+const todayStr = today.toLocaleDateString("en-GB");
 
 document.getElementById("todayTitle").innerText =
-"📅 Kehadiran (" + now.toLocaleDateString("ms-MY") + ")";
+"📅 Kehadiran (" + today.toLocaleDateString("ms-MY") + ")";
 
 document.getElementById("alertTitle").innerText =
-"⚠️ Belum Rekod (" + now.toLocaleDateString("ms-MY") + ")";
+"⚠️ Belum Rekod (" + today.toLocaleDateString("ms-MY") + ")";
 
 let hadir=0, masuk=0;
 let absentByClass={}, absentHistory={}, dates={}, recorded=[];
 
+/* LOOP DATA */
 data.forEach(r=>{
     const jumlah=+r.Jumlah;
-    const absent=r["Tidak Hadir"]?r["Tidak Hadir"].split(","):[];
+    const absent=r["Tidak Hadir"] ? r["Tidak Hadir"].split(",").map(x=>x.trim()) : [];
     const hadirNow=jumlah-absent.length;
 
     if(r.Tarikh===todayStr){
@@ -147,7 +148,6 @@ data.forEach(r=>{
     }
 
     absent.forEach(n=>{
-        n=n.trim();
         absentHistory[n]=(absentHistory[n]||0)+1;
     });
 
@@ -156,47 +156,54 @@ data.forEach(r=>{
     dates[r.Tarikh].t+=jumlah;
 });
 
-/* TODAY */
-const percent=((hadir/TOTAL_SEKOLAH)*100).toFixed(1);
+/* TOP CARD */
+const percent=((hadir/TOTAL)*100).toFixed(1);
 const el=document.getElementById("percent");
 el.innerText=percent+"%";
 el.className=percent>=95?"big good":"big bad";
 
 document.getElementById("total").innerHTML=
-`Hadir: ${hadir}/${TOTAL_SEKOLAH}<br>
-Belum Rekod: ${TOTAL_SEKOLAH-masuk}`;
+`Hadir: ${hadir}/${TOTAL}<br>
+Belum Rekod: ${TOTAL-masuk}`;
 
 /* ALERT */
-const allClasses=[
+const classes=[
 "1 Amber","1 Amethyst","1 Aquamarine",
 "2 Amber","2 Amethyst","2 Aquamarine",
 "3 Amber","3 Amethyst","3 Aquamarine",
 "4 Amber","4 Amethyst","4 Aquamarine",
 "5 Amber","5 Amethyst","5 Aquamarine",
-"6 Amber","6 Amethyst","6 Aquamarine"
+"6 Amber","6 Amethyst","6 Aquamarine",
+"PRA CITRINE","PRA CRYSTAL"
 ];
 
 const alertBox=document.getElementById("alert");
 alertBox.innerHTML="";
-
-allClasses.forEach(k=>{
+classes.forEach(k=>{
 if(!recorded.includes(k)){
 alertBox.innerHTML+=`<li>❌ ${k}</li>`;
 }
 });
 
 /* RANKING */
-function rank(data,mode){
+function rank(mode){
+
 let kls={};
 const now=new Date();
-const start=new Date(now); start.setDate(now.getDate()-now.getDay());
-const end=new Date(start); end.setDate(start.getDate()+4);
+const start=new Date(now);
+start.setDate(now.getDate()-now.getDay());
+const end=new Date(start);
+end.setDate(start.getDate()+4);
+
+const startMonth=new Date(now);
+startMonth.setDate(now.getDate()-30);
 
 data.forEach(r=>{
 const [d,m,y]=r.Tarikh.split("/");
 const dt=new Date(`${y}-${m}-${d}`);
 
-if(mode==="week"&&(dt<start||dt>end))return;
+if(mode==="week"&&(dt<start||dt>end)) return;
+if(mode==="month"&&(dt<startMonth)) return;
 
 const j=+r.Jumlah;
 const ab=r["Tidak Hadir"]?r["Tidak Hadir"].split(",").length:0;
@@ -215,47 +222,79 @@ function render(id,data){
 const el=document.getElementById(id);
 el.innerHTML="";
 ["🥇","🥈","🥉"].forEach((m,i)=>{
-if(data[i]) el.innerHTML+=`<li>${m} ${data[i][0]}</li>`;
+if(data[i]) el.innerHTML+=`<li>${m} ${data[i][0]} (${data[i][1].toFixed(1)}%)</li>`;
 });
 }
 
-render("ranking_week",rank(data,"week"));
-render("ranking_month",rank(data));
+render("ranking_week",rank("week"));
+render("ranking_month",rank("month"));
+render("ranking_all",rank());
 
-/* FILTER + ABSENT */
+/* FILTER */
 const filter=document.getElementById("classFilter");
-filter.innerHTML=`<option value="ALL">Semua</option>`;
+filter.innerHTML=`<option value="ALL">Semua Kelas</option>`;
 Object.keys(absentByClass).forEach(k=>{
 filter.innerHTML+=`<option>${k}</option>`;
 });
 
 function renderAbsent(sel="ALL"){
+
 const box=document.getElementById("absentList");
 box.innerHTML="";
 
-Object.entries(absentByClass).forEach(([k,list])=>{
-if(sel!=="ALL"&&k!==sel)return;
+classes.forEach(k=>{
 
-box.innerHTML+=`<b>${k}</b><ul>`+
+if(sel!=="ALL" && k!==sel) return;
+
+const list=absentByClass[k]||[];
+
+box.innerHTML+=`<div style="margin-bottom:10px;">
+<b style="color:#38bdf8">${k}</b>`;
+
+if(list.length===0){
+box.innerHTML+=`<p style="color:#22c55e">✅ Semua hadir</p>`;
+}else{
+box.innerHTML+=`<ul>`+
 list.map(n=>{
-const bad=absentHistory[n.trim()]>=3;
+const bad=absentHistory[n]>=3;
 return `<li style="color:${bad?'#ef4444':'white'}">
 ${bad?'🔴':'❌'} ${n}
 </li>`;
 }).join("")+"</ul>";
+}
+
+box.innerHTML+=`</div>`;
 });
+
 }
 
 filter.onchange=e=>renderAbsent(e.target.value);
 renderAbsent();
 
-/* CHART */
-const labels=Object.keys(dates).slice(-7);
-const values=labels.map(d=>dates[d].h/dates[d].t*100);
+/* CHART FIX (NO UNDEFINED) */
+const sortedDates = Object.keys(dates)
+.sort((a,b)=>{
+const [d1,m1,y1]=a.split("/");
+const [d2,m2,y2]=b.split("/");
+return new Date(`${y1}-${m1}-${d1}`) - new Date(`${y2}-${m2}-${d2}`);
+})
+.slice(-7);
+
+const values = sortedDates.map(d=>{
+const v=dates[d];
+return v.t ? (v.h/v.t)*100 : 0;
+});
 
 new Chart(document.getElementById("chart"),{
 type:'line',
-data:{labels,datasets:[{data:values}]}
+data:{
+labels:sortedDates,
+datasets:[{
+label:"%",
+data:values,
+tension:0.4
+}]
+}
 });
 
 }
