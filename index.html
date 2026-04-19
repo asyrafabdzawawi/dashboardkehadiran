@@ -74,7 +74,7 @@ ul {
 <div class="container">
 
 <div class="card">
-    <h2>📅 Kehadiran Hari Ini</h2>
+    <h2 id="todayTitle">📅 Kehadiran Hari Ini</h2>
     <div id="percent" class="big">Loading...</div>
     <p id="total"></p>
 </div>
@@ -93,7 +93,7 @@ ul {
 </div>
 
 <div class="card">
-    <h2>⚠️ Belum Isi</h2>
+    <h2 id="alertTitle">⚠️ Belum Isi</h2>
     <ul id="alert" class="alert"></ul>
 </div>
 
@@ -123,6 +123,20 @@ const ALL_CLASSES = [
 
 async function loadData() {
 
+    const now = new Date();
+
+// format Malaysia
+    const tarikh = now.toLocaleDateString("ms-MY", {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    });
+
+// set dekat title
+    document.getElementById("todayTitle").innerText = `📅 Kehadiran Hari Ini (${tarikh})`;
+    document.getElementById("alertTitle").innerText = `⚠️ Belum Isi (${tarikh})`;
+    
     const res = await fetch(URL);
     const data = await res.json();
 
