@@ -116,6 +116,8 @@ const TOTAL = 520;
 
 async function loadData(){
 
+console.log("⏱ Data refreshed:", new Date().toLocaleTimeString());
+
 const res = await fetch(URL);
 const data = await res.json();
 
