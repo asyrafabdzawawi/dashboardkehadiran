@@ -257,8 +257,8 @@ box.innerHTML+=`<p style="color:#22c55e">✅ Semua hadir</p>`;
 box.innerHTML+=`<ul>`+
 list.map(n=>{
 const bad=absentHistory[n]>=3;
-return `<li style="color:${bad?'#ef4444':'white'}">
-${bad?'🔴':'❌'} ${n}
+return `<li style="color:#ef4444">
+❌ ${n}
 </li>`;
 }).join("")+"</ul>";
 }
