@@ -73,18 +73,16 @@ ul {
 
 <div class="container">
 
-<!-- TODAY -->
 <div class="card">
     <h2>📅 Kehadiran Hari Ini</h2>
     <div id="percent" class="big">Loading...</div>
     <p id="total"></p>
 </div>
 
-<!-- RANKING -->
 <div class="card">
     <h2>🏆 Ranking Kelas</h2>
 
-    <h3>📅 Mingguan</h3>
+    <h3>📅 Mingguan (Ahad–Khamis)</h3>
     <ul id="ranking_week" class="rank"></ul>
 
     <h3>🗓 Bulanan</h3>
@@ -94,13 +92,11 @@ ul {
     <ul id="ranking_all" class="rank"></ul>
 </div>
 
-<!-- ALERT -->
 <div class="card">
     <h2>⚠️ Belum Isi</h2>
     <ul id="alert" class="alert"></ul>
 </div>
 
-<!-- CHART -->
 <div class="card">
     <h2>📈 Trend 7 Hari</h2>
     <canvas id="chart"></canvas>
@@ -164,7 +160,6 @@ async function loadData() {
     percentEl.innerText = percent + "%";
     percentEl.className = percent >= 95 ? "big good" : "big bad";
 
-    // PAPAR INFO
     const belumRekod = TOTAL_SEKOLAH - jumlahMasuk;
 
     document.getElementById("total").innerHTML = `
@@ -191,11 +186,25 @@ async function loadData() {
         alertBox.innerHTML += `<li style="color:#ef4444">🚨 Data belum lengkap (${jumlahMasuk}/${TOTAL_SEKOLAH})</li>`;
     }
 
-    // 📊 RANKING FUNCTION
-    function kiraRanking(data, days=null) {
+    // 🔥 RANKING FUNCTION (SYNC BOT)
+    function kiraRanking(data, mode) {
 
         let kelas = {};
         const today = new Date();
+
+        // 🔥 AHAD START
+        const startWeek = new Date(today);
+        const day = today.getDay(); // Ahad = 0
+        startWeek.setDate(today.getDate() - day);
+        startWeek.setHours(0,0,0,0);
+
+        // 🔥 KHAMIS END
+        const endWeek = new Date(startWeek);
+        endWeek.setDate(startWeek.getDate() + 4);
+        endWeek.setHours(23,59,59,999);
+
+        const startMonth = new Date(today);
+        startMonth.setDate(today.getDate() - 30);
 
         data.forEach(r => {
 
@@ -203,12 +212,15 @@ async function loadData() {
             const absent = r["Tidak Hadir"] ? r["Tidak Hadir"].split(",").length : 0;
             const hadir = jumlah - absent;
 
-            if (days !== null) {
-                const [d,m,y] = r.Tarikh.split("/");
-                const date = new Date(`${y}-${m}-${d}`);
-                const diff = (today - date) / (1000*60*60*24);
+            const [d,m,y] = r.Tarikh.split("/");
+            const date = new Date(`${y}-${m}-${d}`);
 
-                if (diff > days) return;
+            if (mode === "week") {
+                if (date < startWeek || date > endWeek) return;
+            }
+
+            if (mode === "month") {
+                if (date < startMonth) return;
             }
 
             if (!kelas[r.Kelas]) {
@@ -228,8 +240,8 @@ async function loadData() {
         return ranking.slice(0,3);
     }
 
-    const weekly = kiraRanking(data, 7);
-    const monthly = kiraRanking(data, 30);
+    const weekly = kiraRanking(data, "week");
+    const monthly = kiraRanking(data, "month");
     const overall = kiraRanking(data, null);
 
     function render(id, list) {
@@ -265,7 +277,6 @@ async function loadData() {
 
 loadData();
 
-// AUTO REFRESH
 setInterval(() => location.reload(), 10000);
 
 </script>
