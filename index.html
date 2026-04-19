@@ -116,10 +116,23 @@ const TOTAL = 520;
 
 async function loadData(){
 
+const nowDate = new Date().toDateString();
+
+if (nowDate !== lastDate) {
+    console.log("🔄 Hari baru → reload");
+    location.reload();
+}
 console.log("⏱ Data refreshed:", new Date().toLocaleTimeString());
 
-const res = await fetch(URL);
-const data = await res.json();
+let data;
+
+try {
+    const res = await fetch(URL);
+    data = await res.json();
+} catch (e) {
+    console.log("❌ Error fetch:", e);
+    return;
+}
 
 const today = new Date();
 const todayStr = today.toLocaleDateString("en-GB");
@@ -319,7 +332,11 @@ const v=dates[d];
 return v.t ? (v.h/v.t)*100 : 0;
 });
 
-new Chart(document.getElementById("chart"),{
+if (myChart) {
+    myChart.destroy(); // buang chart lama
+}
+
+myChart = new Chart(document.getElementById("chart"),{
 type:'line',
 data:{
 labels:sortedDates,
@@ -333,6 +350,8 @@ tension:0.4
 
 }
 let isStopped = false;
+let myChart;
+let lastDate = new Date().toDateString();
 loadData();
 let refreshInterval = setInterval(loadData, 300000);
 
