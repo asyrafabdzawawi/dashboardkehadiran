@@ -124,13 +124,17 @@ ul {
 
 const URL = "https://opensheet.elk.sh/1KPsN_fdh7b1rj-6fJOljPdcn87Tz2qmh-iMwUhwPrbg/Kehadiran";
 
+// 🔥 TOTAL SEBENAR SEKOLAH
+const TOTAL_SEKOLAH = 520;
+
 const ALL_CLASSES = [
 "1 Amber","1 Amethyst","1 Aquamarine",
 "2 Amber","2 Amethyst","2 Aquamarine",
 "3 Amber","3 Amethyst","3 Aquamarine",
 "4 Amber","4 Amethyst","4 Aquamarine",
 "5 Amber","5 Amethyst","5 Aquamarine",
-"6 Amber","6 Amethyst","6 Aquamarine"
+"6 Amber","6 Amethyst","6 Aquamarine",
+"PRA CITRINE","PRA CRYSTAL"
 ];
 
 async function loadData() {
@@ -140,11 +144,11 @@ async function loadData() {
 
     const today = new Date().toLocaleDateString("en-GB");
 
-    let total = 0;
     let hadir = 0;
     let kelasStat = {};
     let dates = {};
     let recordedToday = [];
+    let jumlahMasuk = 0;
 
     data.forEach(r => {
 
@@ -154,9 +158,14 @@ async function loadData() {
 
         // TODAY
         if (r.Tarikh === today) {
-            total += jumlah;
             hadir += hadirNow;
+            jumlahMasuk += jumlah;
             recordedToday.push(r.Kelas.toLowerCase());
+
+            // 🔴 detect kelas tak lengkap
+            if (jumlah < 25) {
+                console.warn("⚠️ Data mungkin tak lengkap:", r.Kelas);
+            }
         }
 
         // RANK
@@ -175,19 +184,23 @@ async function loadData() {
 
     });
 
-    // TODAY DISPLAY
-    const percent = total ? ((hadir/total)*100).toFixed(1) : 0;
+    // 🔥 % SEBENAR (guna 520)
+    const percent = ((hadir / TOTAL_SEKOLAH) * 100).toFixed(1);
 
     const percentEl = document.getElementById("percent");
     percentEl.innerText = percent + "%";
 
-    // warna live
-    if (percent >= 95) percentEl.classList.add("good");
-    else percentEl.classList.add("bad");
+    // 🔴 warna ikut status sebenar
+    if (percent >= 95) percentEl.className = "big good";
+    else percentEl.className = "big bad";
 
-    document.getElementById("total").innerText = `${hadir} / ${total} murid`;
+    // 🔥 PAPAR INFO
+    document.getElementById("total").innerHTML = `
+        Hadir: ${hadir} / ${TOTAL_SEKOLAH} murid<br>
+        Data Masuk: ${jumlahMasuk} murid
+    `;
 
-    // RANKING
+    // 🏆 RANKING
     let ranking = Object.entries(kelasStat).map(([k,v])=>{
         return [k, (v.h/v.t)*100];
     });
@@ -204,7 +217,7 @@ async function loadData() {
         ul.innerHTML += `<li>${medal[i]} ${r[0]} - ${r[1].toFixed(1)}%</li>`;
     });
 
-    // ALERT
+    // ⚠️ ALERT
     const belum = ALL_CLASSES.filter(k => !recordedToday.includes(k.toLowerCase()));
 
     const alertBox = document.getElementById("alert");
@@ -218,7 +231,12 @@ async function loadData() {
         });
     }
 
-    // CHART
+    // 🔴 WARNING BESAR kalau data tak cukup
+    if (jumlahMasuk < TOTAL_SEKOLAH) {
+        alertBox.innerHTML += `<li style="color:#ef4444">🚨 Data belum lengkap (${jumlahMasuk}/${TOTAL_SEKOLAH})</li>`;
+    }
+
+    // 📈 CHART
     const labels = Object.keys(dates).slice(-7);
     const values = labels.map(d => (dates[d].h/dates[d].t)*100);
 
@@ -242,6 +260,5 @@ loadData();
 setInterval(() => location.reload(), 10000);
 
 </script>
-
 </body>
 </html>
