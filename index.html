@@ -189,33 +189,53 @@ alertBox.innerHTML+=`<li>❌ ${k}</li>`;
 function rank(mode){
 
 let kls={};
+
 const now=new Date();
+
+// 🔥 AHAD (start minggu)
 const start=new Date(now);
-start.setDate(now.getDate()-now.getDay());
+const day=now.getDay(); // Ahad = 0
+start.setDate(now.getDate()-day);
+start.setHours(0,0,0,0); // IMPORTANT
+
+// 🔥 KHAMIS (end minggu)
 const end=new Date(start);
 end.setDate(start.getDate()+4);
+end.setHours(23,59,59,999); // IMPORTANT
 
+// 🔥 BULAN (30 hari)
 const startMonth=new Date(now);
 startMonth.setDate(now.getDate()-30);
+startMonth.setHours(0,0,0,0);
 
 data.forEach(r=>{
+
 const [d,m,y]=r.Tarikh.split("/");
 const dt=new Date(`${y}-${m}-${d}`);
 
-if(mode==="week"&&(dt<start||dt>end)) return;
-if(mode==="month"&&(dt<startMonth)) return;
+if(mode==="week"){
+    if(dt < start || dt > end) return;
+}
+
+if(mode==="month"){
+    if(dt < startMonth) return;
+}
 
 const j=+r.Jumlah;
 const ab=r["Tidak Hadir"]?r["Tidak Hadir"].split(",").length:0;
 const h=j-ab;
 
 if(!kls[r.Kelas])kls[r.Kelas]={h:0,t:0};
-kls[r.Kelas].h+=h;kls[r.Kelas].t+=j;
+
+kls[r.Kelas].h+=h;
+kls[r.Kelas].t+=j;
+
 });
 
 return Object.entries(kls)
 .map(([k,v])=>[k,(v.h/v.t)*100])
-.sort((a,b)=>b[1]-a[1]).slice(0,3);
+.sort((a,b)=>b[1]-a[1])
+.slice(0,3);
 }
 
 function render(id,data){
