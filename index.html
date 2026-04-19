@@ -267,7 +267,7 @@ render("ranking_all",rank());
 /* FILTER */
 const filter=document.getElementById("classFilter");
 filter.innerHTML=`<option value="ALL">Semua Kelas</option>`;
-Object.keys(absentByClass).forEach(k=>{
+classes.forEach(k=>{
 filter.innerHTML+=`<option>${k}</option>`;
 });
 
