@@ -75,12 +75,14 @@ ul {
 
 <div class="container">
 
+<!-- TODAY -->
 <div class="card">
     <h2 id="todayTitle">📅 Kehadiran Hari Ini</h2>
     <div id="percent" class="big">Loading...</div>
     <p id="total"></p>
 </div>
 
+<!-- RANKING -->
 <div class="card">
     <h2>🏆 Ranking Kelas</h2>
 
@@ -94,11 +96,19 @@ ul {
     <ul id="ranking_all" class="rank"></ul>
 </div>
 
+<!-- ALERT -->
 <div class="card">
     <h2 id="alertTitle">⚠️ Belum Isi</h2>
     <ul id="alert" class="alert"></ul>
 </div>
 
+<!-- ❗ BARU: ABSENT LIST -->
+<div class="card">
+    <h2>🚫 Murid Tidak Hadir (Hari Ini)</h2>
+    <div id="absentList"></div>
+</div>
+
+<!-- CHART -->
 <div class="card">
     <h2>📈 Trend 7 Hari</h2>
     <canvas id="chart"></canvas>
@@ -127,7 +137,6 @@ async function loadData() {
 
     const now = new Date();
 
-// format Malaysia
     const tarikh = now.toLocaleDateString("ms-MY", {
         weekday: 'long',
         day: 'numeric',
@@ -135,10 +144,9 @@ async function loadData() {
         year: 'numeric'
     });
 
-// set dekat title
     document.getElementById("todayTitle").innerText = `📅 Kehadiran Hari Ini (${tarikh})`;
     document.getElementById("alertTitle").innerText = `⚠️ Belum Rekod Kehadiran (${tarikh})`;
-    
+
     const res = await fetch(URL);
     const data = await res.json();
 
@@ -148,6 +156,7 @@ async function loadData() {
     let jumlahMasuk = 0;
     let recordedToday = [];
     let dates = {};
+    let absentByClass = {};
 
     data.forEach(r => {
 
@@ -159,6 +168,17 @@ async function loadData() {
             hadir += hadirNow;
             jumlahMasuk += jumlah;
             recordedToday.push(r.Kelas.toLowerCase());
+
+            // 🔥 SIMPAN NAMA TAK HADIR
+            if (r["Tidak Hadir"]) {
+                const names = r["Tidak Hadir"].split(",").map(n => n.trim());
+
+                if (!absentByClass[r.Kelas]) {
+                    absentByClass[r.Kelas] = [];
+                }
+
+                absentByClass[r.Kelas].push(...names);
+            }
         }
 
         if (!dates[r.Tarikh]) {
@@ -169,7 +189,7 @@ async function loadData() {
         dates[r.Tarikh].t += jumlah;
     });
 
-    // % sebenar
+    // % hadir
     const percent = ((hadir / TOTAL_SEKOLAH) * 100).toFixed(1);
     const percentEl = document.getElementById("percent");
 
@@ -202,19 +222,36 @@ async function loadData() {
         alertBox.innerHTML += `<li style="color:#ef4444">🚨 Data belum lengkap (${jumlahMasuk}/${TOTAL_SEKOLAH})</li>`;
     }
 
-    // 🔥 RANKING FUNCTION (SYNC BOT)
+    // 🔥 PAPAR SENARAI TAK HADIR
+    const absentBox = document.getElementById("absentList");
+    absentBox.innerHTML = "";
+
+    if (Object.keys(absentByClass).length === 0) {
+        absentBox.innerHTML = "<p style='color:#22c55e'>✅ Semua murid hadir</p>";
+    } else {
+        for (let kelas in absentByClass) {
+            absentBox.innerHTML += `
+                <div style="margin-bottom:15px;">
+                    <b style="color:#38bdf8">📌 ${kelas}</b>
+                    <ul>
+                        ${absentByClass[kelas].map(n => `<li>❌ ${n}</li>`).join("")}
+                    </ul>
+                </div>
+            `;
+        }
+    }
+
+    // 🔥 RANKING (AHAD–KHAMIS)
     function kiraRanking(data, mode) {
 
         let kelas = {};
         const today = new Date();
 
-        // 🔥 AHAD START
         const startWeek = new Date(today);
-        const day = today.getDay(); // Ahad = 0
+        const day = today.getDay();
         startWeek.setDate(today.getDate() - day);
         startWeek.setHours(0,0,0,0);
 
-        // 🔥 KHAMIS END
         const endWeek = new Date(startWeek);
         endWeek.setDate(startWeek.getDate() + 4);
         endWeek.setHours(23,59,59,999);
@@ -256,10 +293,6 @@ async function loadData() {
         return ranking.slice(0,3);
     }
 
-    const weekly = kiraRanking(data, "week");
-    const monthly = kiraRanking(data, "month");
-    const overall = kiraRanking(data, null);
-
     function render(id, list) {
         const medal = ["🥇","🥈","🥉"];
         const el = document.getElementById(id);
@@ -270,9 +303,9 @@ async function loadData() {
         });
     }
 
-    render("ranking_week", weekly);
-    render("ranking_month", monthly);
-    render("ranking_all", overall);
+    render("ranking_week", kiraRanking(data,"week"));
+    render("ranking_month", kiraRanking(data,"month"));
+    render("ranking_all", kiraRanking(data,null));
 
     // CHART
     const labels = Object.keys(dates).slice(-7);
@@ -292,7 +325,6 @@ async function loadData() {
 }
 
 loadData();
-
 setInterval(() => location.reload(), 600000);
 
 </script>
