@@ -18,314 +18,250 @@ h1 {
     font-size: 42px;
     margin-top: 20px;
     color: #38bdf8;
-    text-shadow: 0 0 15px #38bdf8;
 }
 
+/* 🔥 LAYOUT */
 .container {
     display: grid;
-    grid-template-columns: repeat(auto-fit,minmax(320px,1fr));
+    grid-template-columns: repeat(4,1fr);
     gap: 20px;
     padding: 20px;
 }
 
+.full {
+    grid-column: span 4;
+}
+
 .card {
-    background: rgba(30,41,59,0.8);
+    background: rgba(30,41,59,0.85);
     padding: 20px;
     border-radius: 20px;
-    backdrop-filter: blur(10px);
     box-shadow: 0 0 20px rgba(56,189,248,0.2);
 }
 
 .big {
-    font-size: 55px;
+    font-size: 60px;
     font-weight: bold;
 }
 
 .good { color: #22c55e; }
 .bad { color: #ef4444; }
 
-ul {
-    list-style: none;
-    padding: 0;
-    font-size: 18px;
-}
+ul { list-style: none; padding: 0; }
 
 .rank li {
-    margin: 6px 0;
+    margin: 5px 0;
     padding: 8px;
-    border-radius: 10px;
     background: rgba(255,255,255,0.05);
+    border-radius: 10px;
 }
 
 .alert li { color: #f87171; }
 
-.footer {
-    opacity: 0.5;
-    margin: 10px;
-    font-size: 12px;
+select {
+    padding:5px;
+    margin-bottom:10px;
 }
+
 </style>
 </head>
 
 <body>
 
-<div style="margin-top:20px;">
-    <h1>📊 Dashboard Kehadiran SK Labu Besar</h1>
-</div>
+<h1>📊 Dashboard Kehadiran SK Labu Besar</h1>
 
 <div class="container">
 
-<!-- TODAY -->
-<div class="card">
-    <h2 id="todayTitle">📅 Kehadiran Hari Ini</h2>
+<!-- 🔥 FULL WIDTH -->
+<div class="card full">
+    <h2 id="todayTitle"></h2>
     <div id="percent" class="big">Loading...</div>
     <p id="total"></p>
 </div>
 
 <!-- RANKING -->
 <div class="card">
-    <h2>🏆 Ranking Kelas</h2>
-
-    <h3>📅 Mingguan (Ahad–Khamis)</h3>
-    <ul id="ranking_week" class="rank"></ul>
-
-    <h3>🗓 Bulanan</h3>
-    <ul id="ranking_month" class="rank"></ul>
-
-    <h3>🌍 Keseluruhan</h3>
-    <ul id="ranking_all" class="rank"></ul>
+    <h2>🏆 Ranking</h2>
+    <h4>Mingguan</h4>
+    <ul id="ranking_week"></ul>
+    <h4>Bulanan</h4>
+    <ul id="ranking_month"></ul>
 </div>
 
 <!-- ALERT -->
 <div class="card">
-    <h2 id="alertTitle">⚠️ Belum Isi</h2>
-    <ul id="alert" class="alert"></ul>
+    <h2 id="alertTitle"></h2>
+    <ul id="alert"></ul>
 </div>
 
-<!-- ❗ BARU: ABSENT LIST -->
+<!-- ABSENT -->
 <div class="card">
-    <h2>🚫 Murid Tidak Hadir (Hari Ini)</h2>
+    <h2>🚫 Tidak Hadir</h2>
+    <select id="classFilter"></select>
     <div id="absentList"></div>
 </div>
 
 <!-- CHART -->
 <div class="card">
-    <h2>📈 Trend 7 Hari</h2>
+    <h2>📈 Trend</h2>
     <canvas id="chart"></canvas>
 </div>
 
 </div>
-
-<div class="footer">Auto Refresh setiap 10 minit</div>
 
 <script>
 
 const URL = "https://opensheet.elk.sh/1KPsN_fdh7b1rj-6fJOljPdcn87Tz2qmh-iMwUhwPrbg/Kehadiran";
 const TOTAL_SEKOLAH = 520;
 
-const ALL_CLASSES = [
+async function loadData(){
+
+const res = await fetch(URL);
+const data = await res.json();
+
+const todayStr = new Date().toLocaleDateString("en-GB");
+const now = new Date();
+
+document.getElementById("todayTitle").innerText =
+"📅 Kehadiran (" + now.toLocaleDateString("ms-MY") + ")";
+
+document.getElementById("alertTitle").innerText =
+"⚠️ Belum Rekod (" + now.toLocaleDateString("ms-MY") + ")";
+
+let hadir=0, masuk=0;
+let absentByClass={}, absentHistory={}, dates={}, recorded=[];
+
+data.forEach(r=>{
+    const jumlah=+r.Jumlah;
+    const absent=r["Tidak Hadir"]?r["Tidak Hadir"].split(","):[];
+    const hadirNow=jumlah-absent.length;
+
+    if(r.Tarikh===todayStr){
+        hadir+=hadirNow;
+        masuk+=jumlah;
+        recorded.push(r.Kelas);
+
+        if(absent.length){
+            absentByClass[r.Kelas]=absent;
+        }
+    }
+
+    absent.forEach(n=>{
+        n=n.trim();
+        absentHistory[n]=(absentHistory[n]||0)+1;
+    });
+
+    if(!dates[r.Tarikh]) dates[r.Tarikh]={h:0,t:0};
+    dates[r.Tarikh].h+=hadirNow;
+    dates[r.Tarikh].t+=jumlah;
+});
+
+/* TODAY */
+const percent=((hadir/TOTAL_SEKOLAH)*100).toFixed(1);
+const el=document.getElementById("percent");
+el.innerText=percent+"%";
+el.className=percent>=95?"big good":"big bad";
+
+document.getElementById("total").innerHTML=
+`Hadir: ${hadir}/${TOTAL_SEKOLAH}<br>
+Belum Rekod: ${TOTAL_SEKOLAH-masuk}`;
+
+/* ALERT */
+const allClasses=[
 "1 Amber","1 Amethyst","1 Aquamarine",
 "2 Amber","2 Amethyst","2 Aquamarine",
 "3 Amber","3 Amethyst","3 Aquamarine",
 "4 Amber","4 Amethyst","4 Aquamarine",
 "5 Amber","5 Amethyst","5 Aquamarine",
-"6 Amber","6 Amethyst","6 Aquamarine",
-"PRA CITRINE","PRA CRYSTAL"
+"6 Amber","6 Amethyst","6 Aquamarine"
 ];
 
-async function loadData() {
+const alertBox=document.getElementById("alert");
+alertBox.innerHTML="";
 
-    const now = new Date();
+allClasses.forEach(k=>{
+if(!recorded.includes(k)){
+alertBox.innerHTML+=`<li>❌ ${k}</li>`;
+}
+});
 
-    const tarikh = now.toLocaleDateString("ms-MY", {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-    });
+/* RANKING */
+function rank(data,mode){
+let kls={};
+const now=new Date();
+const start=new Date(now); start.setDate(now.getDate()-now.getDay());
+const end=new Date(start); end.setDate(start.getDate()+4);
 
-    document.getElementById("todayTitle").innerText = `📅 Kehadiran Hari Ini (${tarikh})`;
-    document.getElementById("alertTitle").innerText = `⚠️ Belum Rekod Kehadiran (${tarikh})`;
+data.forEach(r=>{
+const [d,m,y]=r.Tarikh.split("/");
+const dt=new Date(`${y}-${m}-${d}`);
 
-    const res = await fetch(URL);
-    const data = await res.json();
+if(mode==="week"&&(dt<start||dt>end))return;
 
-    const today = new Date().toLocaleDateString("en-GB");
+const j=+r.Jumlah;
+const ab=r["Tidak Hadir"]?r["Tidak Hadir"].split(",").length:0;
+const h=j-ab;
 
-    let hadir = 0;
-    let jumlahMasuk = 0;
-    let recordedToday = [];
-    let dates = {};
-    let absentByClass = {};
+if(!kls[r.Kelas])kls[r.Kelas]={h:0,t:0};
+kls[r.Kelas].h+=h;kls[r.Kelas].t+=j;
+});
 
-    data.forEach(r => {
+return Object.entries(kls)
+.map(([k,v])=>[k,(v.h/v.t)*100])
+.sort((a,b)=>b[1]-a[1]).slice(0,3);
+}
 
-        const jumlah = Number(r.Jumlah);
-        const absent = r["Tidak Hadir"] ? r["Tidak Hadir"].split(",").length : 0;
-        const hadirNow = jumlah - absent;
+function render(id,data){
+const el=document.getElementById(id);
+el.innerHTML="";
+["🥇","🥈","🥉"].forEach((m,i)=>{
+if(data[i]) el.innerHTML+=`<li>${m} ${data[i][0]}</li>`;
+});
+}
 
-        if (r.Tarikh === today) {
-            hadir += hadirNow;
-            jumlahMasuk += jumlah;
-            recordedToday.push(r.Kelas.toLowerCase());
+render("ranking_week",rank(data,"week"));
+render("ranking_month",rank(data));
 
-            // 🔥 SIMPAN NAMA TAK HADIR
-            if (r["Tidak Hadir"]) {
-                const names = r["Tidak Hadir"].split(",").map(n => n.trim());
+/* FILTER + ABSENT */
+const filter=document.getElementById("classFilter");
+filter.innerHTML=`<option value="ALL">Semua</option>`;
+Object.keys(absentByClass).forEach(k=>{
+filter.innerHTML+=`<option>${k}</option>`;
+});
 
-                if (!absentByClass[r.Kelas]) {
-                    absentByClass[r.Kelas] = [];
-                }
+function renderAbsent(sel="ALL"){
+const box=document.getElementById("absentList");
+box.innerHTML="";
 
-                absentByClass[r.Kelas].push(...names);
-            }
-        }
+Object.entries(absentByClass).forEach(([k,list])=>{
+if(sel!=="ALL"&&k!==sel)return;
 
-        if (!dates[r.Tarikh]) {
-            dates[r.Tarikh] = {h:0,t:0};
-        }
+box.innerHTML+=`<b>${k}</b><ul>`+
+list.map(n=>{
+const bad=absentHistory[n.trim()]>=3;
+return `<li style="color:${bad?'#ef4444':'white'}">
+${bad?'🔴':'❌'} ${n}
+</li>`;
+}).join("")+"</ul>";
+});
+}
 
-        dates[r.Tarikh].h += hadirNow;
-        dates[r.Tarikh].t += jumlah;
-    });
+filter.onchange=e=>renderAbsent(e.target.value);
+renderAbsent();
 
-    // % hadir
-    const percent = ((hadir / TOTAL_SEKOLAH) * 100).toFixed(1);
-    const percentEl = document.getElementById("percent");
+/* CHART */
+const labels=Object.keys(dates).slice(-7);
+const values=labels.map(d=>dates[d].h/dates[d].t*100);
 
-    percentEl.innerText = percent + "%";
-    percentEl.className = percent >= 95 ? "big good" : "big bad";
+new Chart(document.getElementById("chart"),{
+type:'line',
+data:{labels,datasets:[{data:values}]}
+});
 
-    const belumRekod = TOTAL_SEKOLAH - jumlahMasuk;
-
-    document.getElementById("total").innerHTML = `
-        Hadir: ${hadir} / ${TOTAL_SEKOLAH}<br>
-        Belum Rekod: ${belumRekod} murid<br>
-        Jumlah Murid: ${TOTAL_SEKOLAH} murid
-    `;
-
-    // ALERT
-    const belum = ALL_CLASSES.filter(k => !recordedToday.includes(k.toLowerCase()));
-
-    const alertBox = document.getElementById("alert");
-    alertBox.innerHTML = "";
-
-    if (belum.length === 0) {
-        alertBox.innerHTML = "<li style='color:#22c55e'>✅ Semua kelas sudah isi</li>";
-    } else {
-        belum.forEach(k=>{
-            alertBox.innerHTML += `<li>❌ ${k}</li>`;
-        });
-    }
-
-    if (jumlahMasuk < TOTAL_SEKOLAH) {
-        alertBox.innerHTML += `<li style="color:#ef4444">🚨 Data belum lengkap (${jumlahMasuk}/${TOTAL_SEKOLAH})</li>`;
-    }
-
-    // 🔥 PAPAR SENARAI TAK HADIR
-    const absentBox = document.getElementById("absentList");
-    absentBox.innerHTML = "";
-
-    if (Object.keys(absentByClass).length === 0) {
-        absentBox.innerHTML = "<p style='color:#22c55e'>✅ Semua murid hadir</p>";
-    } else {
-        for (let kelas in absentByClass) {
-            absentBox.innerHTML += `
-                <div style="margin-bottom:15px;">
-                    <b style="color:#38bdf8">📌 ${kelas}</b>
-                    <ul>
-                        ${absentByClass[kelas].map(n => `<li>❌ ${n}</li>`).join("")}
-                    </ul>
-                </div>
-            `;
-        }
-    }
-
-    // 🔥 RANKING (AHAD–KHAMIS)
-    function kiraRanking(data, mode) {
-
-        let kelas = {};
-        const today = new Date();
-
-        const startWeek = new Date(today);
-        const day = today.getDay();
-        startWeek.setDate(today.getDate() - day);
-        startWeek.setHours(0,0,0,0);
-
-        const endWeek = new Date(startWeek);
-        endWeek.setDate(startWeek.getDate() + 4);
-        endWeek.setHours(23,59,59,999);
-
-        const startMonth = new Date(today);
-        startMonth.setDate(today.getDate() - 30);
-
-        data.forEach(r => {
-
-            const jumlah = Number(r.Jumlah);
-            const absent = r["Tidak Hadir"] ? r["Tidak Hadir"].split(",").length : 0;
-            const hadir = jumlah - absent;
-
-            const [d,m,y] = r.Tarikh.split("/");
-            const date = new Date(`${y}-${m}-${d}`);
-
-            if (mode === "week") {
-                if (date < startWeek || date > endWeek) return;
-            }
-
-            if (mode === "month") {
-                if (date < startMonth) return;
-            }
-
-            if (!kelas[r.Kelas]) {
-                kelas[r.Kelas] = {h:0,t:0};
-            }
-
-            kelas[r.Kelas].h += hadir;
-            kelas[r.Kelas].t += jumlah;
-        });
-
-        let ranking = Object.entries(kelas).map(([k,v])=>{
-            return [k, (v.h/v.t)*100];
-        });
-
-        ranking.sort((a,b)=>b[1]-a[1]);
-
-        return ranking.slice(0,3);
-    }
-
-    function render(id, list) {
-        const medal = ["🥇","🥈","🥉"];
-        const el = document.getElementById(id);
-        el.innerHTML = "";
-
-        list.forEach((r,i)=>{
-            el.innerHTML += `<li>${medal[i]} ${r[0]} - ${r[1].toFixed(1)}%</li>`;
-        });
-    }
-
-    render("ranking_week", kiraRanking(data,"week"));
-    render("ranking_month", kiraRanking(data,"month"));
-    render("ranking_all", kiraRanking(data,null));
-
-    // CHART
-    const labels = Object.keys(dates).slice(-7);
-    const values = labels.map(d => (dates[d].h/dates[d].t)*100);
-
-    new Chart(document.getElementById("chart"), {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Trend Kehadiran (%)',
-                data: values,
-                tension: 0.4
-            }]
-        }
-    });
 }
 
 loadData();
-setInterval(() => location.reload(), 600000);
+setInterval(loadData,600000);
 
 </script>
 
