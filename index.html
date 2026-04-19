@@ -166,6 +166,15 @@ document.getElementById("total").innerHTML=
 `Hadir: ${hadir}/${TOTAL}<br>
 Belum Rekod: ${TOTAL-masuk}`;
 
+if (masuk >= TOTAL) {
+    clearInterval(refreshInterval);
+
+    console.log("✅ Semua kelas telah isi. Auto refresh dihentikan.");
+
+    document.getElementById("total").innerHTML += 
+    `<br><span style="color:#22c55e">✔️ Data lengkap (auto refresh dihentikan)</span>`;
+}
+
 /* ALERT */
 const classes=[
 "1 Amber","1 Amethyst","1 Aquamarine",
@@ -320,7 +329,7 @@ tension:0.4
 }
 
 loadData();
-setInterval(loadData,600000);
+let refreshInterval = setInterval(loadData, 100);
 
 </script>
 
