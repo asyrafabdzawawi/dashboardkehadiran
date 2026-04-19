@@ -195,11 +195,14 @@ async function loadData() {
     else percentEl.className = "big bad";
 
     // 🔥 PAPAR INFO
-    document.getElementById("total").innerHTML = `
-        Hadir: ${hadir} / ${TOTAL_SEKOLAH} murid<br>
-        Data Masuk: ${jumlahMasuk} murid
-    `;
+    const belumRekod = TOTAL_SEKOLAH - jumlahMasuk;
 
+    // PAPARAN FINAL (FORMAT AWAK NAK)
+    document.getElementById("total").innerHTML = `
+        Hadir: ${hadir} / ${TOTAL_SEKOLAH}<br>
+        Belum Rekod: ${belumRekod} murid<br>
+        Jumlah Murid: ${TOTAL_SEKOLAH} murid
+`    ;
     // 🏆 RANKING
     let ranking = Object.entries(kelasStat).map(([k,v])=>{
         return [k, (v.h/v.t)*100];
