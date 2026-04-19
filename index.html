@@ -129,6 +129,7 @@ document.getElementById("alertTitle").innerText =
 "⚠️ Belum Rekod (" + today.toLocaleDateString("ms-MY") + ")";
 
 let hadir=0, masuk=0;
+let isStopped = false;
 let absentByClass={}, absentHistory={}, dates={}, recorded=[];
 
 /* LOOP DATA */
@@ -168,6 +169,7 @@ Belum Rekod: ${TOTAL-masuk}`;
 
 if (masuk >= TOTAL) {
     clearInterval(refreshInterval);
+    isStopped = true;
 
     console.log("✅ Semua kelas telah isi. Auto refresh dihentikan.");
 
