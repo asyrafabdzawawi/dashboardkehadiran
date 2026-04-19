@@ -129,7 +129,7 @@ document.getElementById("alertTitle").innerText =
 "⚠️ Belum Rekod (" + today.toLocaleDateString("ms-MY") + ")";
 
 let hadir=0, masuk=0;
-let isStopped = false;
+
 let absentByClass={}, absentHistory={}, dates={}, recorded=[];
 
 /* LOOP DATA */
@@ -167,7 +167,8 @@ document.getElementById("total").innerHTML=
 `Hadir: ${hadir}/${TOTAL}<br>
 Belum Rekod: ${TOTAL-masuk}`;
 
-if (masuk >= TOTAL) {
+if (masuk >= TOTAL && !isStopped) {
+
     clearInterval(refreshInterval);
     isStopped = true;
 
@@ -329,7 +330,7 @@ tension:0.4
 });
 
 }
-
+let isStopped = false;
 loadData();
 let refreshInterval = setInterval(loadData, 10000);
 
