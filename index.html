@@ -178,9 +178,15 @@ const el=document.getElementById("percent");
 el.innerText=percent+"%";
 el.className=percent>=95?"big good":"big bad";
 
-document.getElementById("total").innerHTML=
+const belumRekod = classes.filter(k => !recorded.includes(k));
+
+document.getElementById("total").innerHTML =
 `Hadir: ${hadir}/${TOTAL}<br>
-Belum Rekod: ${TOTAL-masuk}`;
+Belum Rekod: ${
+    belumRekod.length === 0 
+    ? "Semua kelas telah merekod kehadiran" 
+    : belumRekod.length
+}`;
 
 if (masuk >= TOTAL && !isStopped) {
 
