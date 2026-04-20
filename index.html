@@ -178,6 +178,16 @@ const el=document.getElementById("percent");
 el.innerText=percent+"%";
 el.className=percent>=95?"big good":"big bad";
 
+const classes=[
+"1 Amber","1 Amethyst","1 Aquamarine",
+"2 Amber","2 Amethyst","2 Aquamarine",
+"3 Amber","3 Amethyst","3 Aquamarine",
+"4 Amber","4 Amethyst","4 Aquamarine",
+"5 Amber","5 Amethyst","5 Aquamarine",
+"6 Amber","6 Amethyst","6 Aquamarine",
+"PRA CITRINE","PRA CRYSTAL"
+];
+    
 const belumRekod = classes.filter(k => !recorded.includes(k));
 
 document.getElementById("total").innerHTML =
@@ -188,7 +198,7 @@ Belum Rekod: ${
     : belumRekod.length
 }`;
 
-if (masuk >= TOTAL && !isStopped) {
+if (recorded.length === classes.length && !isStopped) {
 
     clearInterval(refreshInterval);
     isStopped = true;
@@ -200,15 +210,7 @@ if (masuk >= TOTAL && !isStopped) {
 }
 
 /* ALERT */
-const classes=[
-"1 Amber","1 Amethyst","1 Aquamarine",
-"2 Amber","2 Amethyst","2 Aquamarine",
-"3 Amber","3 Amethyst","3 Aquamarine",
-"4 Amber","4 Amethyst","4 Aquamarine",
-"5 Amber","5 Amethyst","5 Aquamarine",
-"6 Amber","6 Amethyst","6 Aquamarine",
-"PRA CITRINE","PRA CRYSTAL"
-];
+
 
 const alertBox=document.getElementById("alert");
 alertBox.innerHTML="";
